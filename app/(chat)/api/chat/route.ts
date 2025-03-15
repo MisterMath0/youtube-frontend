@@ -1,4 +1,4 @@
-// app/(chat)/api/chat/route.ts (modified version)
+// app/(chat)/api/chat/route.ts
 import {
   type Message,
   createDataStreamResponse,
@@ -26,6 +26,7 @@ import { getWeather } from '@/lib/ai/tools/get-weather';
 import { isProductionEnvironment } from '@/lib/constants';
 import { NextResponse } from 'next/server';
 import { myProvider } from '@/lib/ai/providers';
+
 // Import YouTube tools
 import { 
   youtubeTranscriptTool, 
@@ -163,5 +164,30 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  // ... (rest of the DELETE method remains unchanged)
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  if (!id) {
+    return new Response('Missing ID', { status: 400 });
+  }
+
+  const session = await auth();
+
+  if (!session || !session.user || !session.user.id) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
+  const chat = await getChatById({ id });
+
+  if (!chat) {
+    return new Response('Chat not found', { status: 404 });
+  }
+
+  if (chat.userId !== session.user.id) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
+  await deleteChatById({ id });
+
+  return new Response('Deleted', { status: 200 });
 }
